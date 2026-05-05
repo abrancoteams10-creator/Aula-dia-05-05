@@ -10,7 +10,7 @@ df = pd.read_csv('deputados_2022.csv')
 st.title('Buscador de deputados por Estado: ')
 
 Estado = st.text_input('Digite a sigla do estado: ')
-if estado:
+if Estado:
   df_filtrado = df[df['estado']==estado.upper()]
 st.dataframe(df)
 
