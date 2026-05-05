@@ -11,6 +11,4 @@ st.dataframe(df)
 st.title('Buscador de deputados por Estado: ')
 Estado = st.text_input('Digite a sigla do estado: ')
 
-if Estado:
-   filtrado = df[df['estado'].str.upper() == estado.upper()]
-   st.dataframe(filtrado)
+
