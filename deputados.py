@@ -2,38 +2,40 @@ import streamlit as st
 import pandas as pd
 
 # Configuração da página
-st.set_page_config(page_title="Explorador de Deputados 2022", layout="wide")
+st.set_page_config(page_title="Deputados 2022", layout="wide")
 
-st.title("🏛️ Consulta de Deputados Federais (2022)")
-st.markdown("Filtre a base de dados por estado para visualizar os parlamentares.")
+st.title("🏛️ Explorador de Deputados 2022")
 
-# Função para carregar os dados
 @st.cache_data
 def load_data():
-    # Certifique-se que o arquivo está na mesma pasta do script
-    df = pd.read_csv('deputados_2022.csv')
-    return df
+    try:
+        # Tentativa 1: UTF-8 (Padrão moderno)
+        return pd.read_csv('deputados_2022.csv', encoding='utf-8')
+    except UnicodeDecodeError:
+        # Tentativa 2: Latin-1 (Comum em arquivos Excel/Windows brasileiros)
+        return pd.read_csv('deputados_2022.csv', encoding='latin1')
 
 try:
     df = load_data()
 
-    # Barra lateral para filtros
-    st.sidebar.header("Filtros de Pesquisa")
-    
-    # Opção de escolha via Estado (siglaUf)
-    estados = sorted(df['siglaUf'].unique())
-    estado_selecionado = st.sidebar.selectbox("Selecione o Estado (UF):", ["Todos"] + estados)
+    # --- CORREÇÃO DE COLUNA ---
+    # Caso a coluna não se chame exatamente 'siglaUf', ajustamos aqui:
+    coluna_uf = 'siglaUf' if 'siglaUf' in df.columns else df.columns[1] # Pega a 2ª coluna se não achar o nome
 
-    # Filtragem lógica
+    # Filtro na Barra Lateral
+    st.sidebar.header("Configurações")
+    estados = sorted(df[coluna_uf].dropna().unique())
+    estado_selecionado = st.sidebar.selectbox("Selecione o Estado:", ["Todos"] + estados)
+
+    # Lógica de Filtragem
     if estado_selecionado != "Todos":
-        df_filtrado = df[df['siglaUf'] == estado_selecionado]
+        df_filtrado = df[df[coluna_uf] == estado_selecionado]
     else:
         df_filtrado = df
 
-    # Métricas rápidas
-    col1, col2 = st.columns(2)
-    col1.metric("Total de Deputados exibidos", len(df_filtrado))
-    col2.metric("Partidos representados", df_filtrado['siglaPartido'].nunique())
+    # Exibição de Resultados
+    st.metric("Total de Deputados", len(df_filtrado))
+    st.dataframe(df_filtrado, use_container_width=True)
 
     # Exibição da Tabela
     st.subheader(f"Lista de Deputados - {estado_selecionado}")
