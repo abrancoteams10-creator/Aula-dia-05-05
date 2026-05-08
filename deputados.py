@@ -1,36 +1,52 @@
-import csv
+import streamlit as st
+import pandas as pd
 
-def carregar_deputados(caminho_arquivo):
-    deputados = []
-    with open(caminho_arquivo, mode='r', encoding='utf-8') as arquivo:
-        leitor = csv.DictReader(arquivo)
-        for linha in leitor:
-            deputados.append(linha)
-    return deputados
+# Configuração da página
+st.set_page_config(page_title="Explorador de Deputados 2022", layout="wide")
 
-def listar_por_estado(deputados, estado):
-    encontrados = [d for d in deputados if d['estado'].lower() == estado.lower()]
+st.title("🏛️ Consulta de Deputados Federais (2022)")
+st.markdown("Filtre a base de dados por estado para visualizar os parlamentares.")
+
+# Função para carregar os dados
+@st.cache_data
+def load_data():
+    # Certifique-se que o arquivo está na mesma pasta do script
+    df = pd.read_csv('deputados_2022.csv')
+    return df
+
+try:
+    df = load_data()
+
+    # Barra lateral para filtros
+    st.sidebar.header("Filtros de Pesquisa")
     
-    if not encontrados:
-        print(f"Nenhum deputado encontrado para o estado: {estado}")
+    # Opção de escolha via Estado (siglaUf)
+    estados = sorted(df['siglaUf'].unique())
+    estado_selecionado = st.sidebar.selectbox("Selecione o Estado (UF):", ["Todos"] + estados)
+
+    # Filtragem lógica
+    if estado_selecionado != "Todos":
+        df_filtrado = df[df['siglaUf'] == estado_selecionado]
     else:
-        print(f"\nDeputados do estado {estado}:")
-        for d in encontrados:
-            print(f"- {d['nome']}")
+        df_filtrado = df
 
-def main():
-    caminho = "deputados_2022.csv"
-    deputados = carregar_deputados(caminho)
+    # Métricas rápidas
+    col1, col2 = st.columns(2)
+    col1.metric("Total de Deputados exibidos", len(df_filtrado))
+    col2.metric("Partidos representados", df_filtrado['siglaPartido'].nunique())
 
-    while True:
-        estado = input("\nDigite a sigla do estado (ou 'sair' para encerrar): ")
-        
-        if estado.lower() == 'sair':
-            break
-        
-        listar_por_estado(deputados, estado)
+    # Exibição da Tabela
+    st.subheader(f"Lista de Deputados - {estado_selecionado}")
+    st.dataframe(df_filtrado, use_container_width=True)
 
-if __name__ == "__main__":
-    main()
+    # Gráfico simples por partido no estado selecionado
+    st.divider()
+    st.subheader("Distribuição por Partido")
+    chart_data = df_filtrado['siglaPartido'].value_counts()
+    st.bar_chart(chart_data)
 
+except FileNotFoundError:
+    st.error("Erro: O arquivo 'deputados_2022.csv' não foi encontrado. Certifique-se de que ele está no mesmo diretório do script.")
+except Exception as e:
+    st.error(f"Ocorreu um erro inesperado: {e}")
 
